@@ -5,9 +5,9 @@
  * Sberbank credit processing
  *
  * @category    plugin
- * @version     0.1.0
+ * @version     0.1.1
  * @author      mnoskov
- * @internal    @events OnRegisterPayments,OnBeforeOrderSending,OnManagerBeforeOrderRender
+ * @internal    @events OnRegisterPayments,OnBeforeOrderSending,OnManagerBeforeOrderRender,OnBeforeCustomerNotifySending,OnOrderPlaceholdersPopulated
  * @internal    @properties &title=Название;text; &login=Логин;text; &password=Пароль;text; &is_credit=Тип кредитования;list;Кредит без переплаты==0||Кредит==1;1 &debug=Отладка запросов;list;Нет==0||Да==1;1 &test=Тестовый доступ;list;Нет==0||Да==1;1 &min_total=Минимальная сумма заказа;text; &max_total=Максимальная сумма заказа;text; &success_status_id=Статус после оформления кредита;text; &custom_lang=Имя файла с лексиконами (без .inc.php);text;
  * @internal    @modx_category Commerce
  * @internal    @installset base
