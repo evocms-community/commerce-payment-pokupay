@@ -168,7 +168,7 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
                 return false;
             }
 
-            if (empty($status['errorCode'])) {
+            if (empty($status['errorCode']) && !empty($status['orderStatus']) && in_array($status['orderStatus'], [1, 2])) {
                 $processor = $this->modx->commerce->loadProcessor();
 
                 try {
