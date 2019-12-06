@@ -91,7 +91,9 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
         }
 
         $params = [
-            'CMS' => 'Evolution CMS ' . $this->modx->getConfig('settings_version'),
+            'CMS'         => 'Evolution CMS ' . $this->modx->getConfig('settings_version'),
+            'paymentId'   => $payment['id'],
+            'paymentHash' => $payment['hash'],
         ];
 
         foreach (['email', 'phone'] as $field) {
@@ -141,7 +143,7 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
         }
 
         try {
-            $result = $this->request('register.do', $data);
+            $result = $this->request('sbercredit/register.do', $data);
 
             if (empty($result['formUrl'])) {
                 throw new \Exception('Request failed!');
@@ -156,11 +158,11 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
 
     public function handleCallback()
     {
-        if (isset($_REQUEST['mdOrder']) && is_string($_REQUEST['mdOrder']) && isset($_REQUEST['paymentId']) && is_numeric($_REQUEST['paymentId']) && isset($_REQUEST['paymentHash']) && is_string($_REQUEST['paymentHash'])) {
+        if (isset($_REQUEST['mdOrder']) && is_string($_REQUEST['mdOrder']) && !empty($_REQUEST['status'])) {
             $order_id = $_REQUEST['mdOrder'];
 
             try {
-                $status = $this->request('getOrderStatusExtended.do', [
+                $order = $this->request('payment/rest/getOrderStatusExtended.do', [
                     'orderId' => $order_id,
                 ]);
             } catch (\Exception $e) {
@@ -168,17 +170,37 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
                 return false;
             }
 
-            if (empty($status['errorCode']) && !empty($status['orderStatus']) && in_array($status['orderStatus'], [1, 2])) {
-                $processor = $this->modx->commerce->loadProcessor();
+            if (empty($order['errorCode'])) {
+                $paymentId = '';
 
-                try {
-                    $processor->processPayment($_REQUEST['paymentId'], floatval($status['amount']), $this->getSetting('success_status_id'));
-                } catch (\Exception $e) {
-                    $this->modx->logEvent(0, 3, 'Payment process failed: ' . $e->getMessage(), 'Commerce Pokupay Payment');
+                if (!empty($order['merchantOrderParams'])) {
+                    foreach ($order['merchantOrderParams'] as $name => $value) {
+                        if ($name == 'paymentId') {
+                            $paymentId = $value;
+                        }
+                    }
+                }
+
+                if (empty($paymentId)) {
+                    $this->modx->logEvent(0, 3, 'Payment process failed: paymentId empty', 'Commerce Pokupay Payment');
                     return false;
                 }
 
-                $this->modx->sendRedirect(MODX_BASE_URL . 'commerce/pokupay/payment-success?paymentHash=' . $_REQUEST['paymentHash']);
+                $isDeposited = !empty($order['paymentAmountInfo']['paymentState']) && $order['paymentAmountInfo']['paymentState'] == 'DEPOSITED';
+
+                if ($isDeposited) {
+                    $processor = $this->modx->commerce->loadProcessor();
+
+                    try {
+                        $processor->processPayment($paymentId, floatval($order['paymentAmountInfo']['depositedAmount'] * 0.01), $this->getSetting('success_status_id'));
+                    } catch (\Exception $e) {
+                        $this->modx->logEvent(0, 3, 'Payment process failed: ' . $e->getMessage(), 'Commerce Pokupay Payment');
+                        return false;
+                    }
+
+                    echo 'OK';
+                    return true;
+                }
             }
         }
 
@@ -187,18 +209,14 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
 
     protected function getUrl($method)
     {
-        $url = ($this->getSetting('test') == 1 ? 'https://3dsec.sberbank.ru' : 'https://securepayments.sberbank.ru') . '/sbercredit/';
+        $url = ($this->getSetting('test') == 1 ? 'https://3dsec.sberbank.ru' : 'https://securepayments.sberbank.ru') . '/';
         return $url . $method;
     }
 
     protected function request($method, $data)
     {
-        $data['token'] = $this->getSetting('token');
-
-        if (empty($data['token'])) {
-            $data['userName'] = $this->getSetting('login');
-            $data['password'] = $this->getSetting('password');
-        }
+        $data['userName'] = $this->getSetting('login');
+        $data['password'] = $this->getSetting('password');
 
         $url  = $this->getUrl($method);
         $curl = curl_init();

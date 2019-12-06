@@ -11,7 +11,7 @@
  * @internal    @installset base
 */
 
-if (empty($modx->commerce)) {
+if (empty($modx->commerce) || !defined('COMMERCE_INITIALIZED')) {
     return;
 }
 
@@ -39,7 +39,7 @@ if ($plugin) {
 }
 
 // remove installer
-$query = $modx->db->select('id', $tab_plugins, "`name` = '" . $modx->Event->activePlugin . "'");
+$query = $modx->db->select('id', $tab_plugins, "`name` = '" . $modx->event->activePlugin . "'");
 
 if ($id = $modx->db->getValue($query)) {
    $modx->db->delete($tab_plugins, "`id` = '$id'");
