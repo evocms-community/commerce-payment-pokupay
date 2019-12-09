@@ -197,10 +197,9 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
                         $this->modx->logEvent(0, 3, 'Payment process failed: ' . $e->getMessage(), 'Commerce Pokupay Payment');
                         return false;
                     }
-
-                    echo 'OK';
-                    return true;
                 }
+
+                return true;
             }
         }
 
