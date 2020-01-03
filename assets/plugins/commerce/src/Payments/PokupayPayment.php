@@ -174,16 +174,16 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
                 $paymentId = '';
 
                 if (!empty($order['merchantOrderParams'])) {
-                    foreach ($order['merchantOrderParams'] as $name => $value) {
-                        if ($name == 'paymentId') {
-                            $paymentId = $value;
+                    foreach ($order['merchantOrderParams'] as $row) {
+                        if ($row['name'] == 'paymentId') {
+                            $paymentId = $row['value'];
                         }
                     }
                 }
 
                 if (empty($paymentId)) {
                     $this->modx->logEvent(0, 3, 'Payment process failed: paymentId empty', 'Commerce Pokupay Payment');
-                    return false;
+                    return true;
                 }
 
                 $isDeposited = !empty($order['paymentAmountInfo']['paymentState']) && $order['paymentAmountInfo']['paymentState'] == 'DEPOSITED';
@@ -195,8 +195,10 @@ class PokupayPayment extends Payment implements \Commerce\Interfaces\Payment
                         $processor->processPayment($paymentId, floatval($order['paymentAmountInfo']['depositedAmount'] * 0.01), $this->getSetting('success_status_id'));
                     } catch (\Exception $e) {
                         $this->modx->logEvent(0, 3, 'Payment process failed: ' . $e->getMessage(), 'Commerce Pokupay Payment');
-                        return false;
+                        return true;
                     }
+
+                    echo 'OK';
                 }
 
                 return true;
